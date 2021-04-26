@@ -1,0 +1,1 @@
+gcc -Wall -pthread p3150011-p3170065-pizza.c
