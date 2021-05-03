@@ -4,10 +4,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-const int n_tel = 3;            // Number of call handlers
-const int n_cook = 2;           // Number of cooks
-const int n_oven = 10;          // Number of ovens
-const int n_del = 7;      		// Number of deliverers
+int n_tel = 3;            		// Number of call handlers
+int n_cook = 2;           		// Number of cooks
+int n_oven = 10;          		// Number of ovens
+int n_del = 7;            		// Number of deliverers
 
 const int t_order_l = 1;      	// Time range in which a new order arrives
 const int t_order_h = 5;
