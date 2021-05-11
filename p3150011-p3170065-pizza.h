@@ -30,5 +30,4 @@ const int t_pack = 2;           // Time required to pack each pizza
 const int t_del_l = 5;   		// Time range that deliveries take
 const int t_del_h = 15;
 
-void check_mutex(int code);
 void* pizza_thread(void* cust_id);
