@@ -97,20 +97,19 @@ void* pizza_thread(void *order_id) {
 	rc = pthread_mutex_lock(&lock);
 	pizza_num = rand_r(&seed) % (n_order_h - n_order_l) + n_order_l;
 	n_tel++;
-
-	if((rand_r(&seed) % 100) <= p_fail * 100){
+	rc = pthread_cond_signal(&cond);
+	rc = pthread_mutex_unlock(&lock);
+	
+	if((rand_r(&seed) % 100) <= p_fail){
 		failed++;
-		printf("Order with OID %d failed. Cancelling order...\n", oid);
-		rc = pthread_cond_signal(&cond);
-		rc = pthread_mutex_unlock(&lock);
+		printf("Order %d failed. Cancelling order...\n", oid);
+		
 		pthread_exit(NULL);
 	}else{
 		success++;
-		printf("Order with OID %d succeeded\n", oid);
+		printf("Order %d succeeded\n", oid);
 		profits = profits + c_pizza * pizza_num;
 	}
-	rc = pthread_cond_signal(&cond);
-	rc = pthread_mutex_unlock(&lock);
 
 	//Cook handling
 	rc = pthread_mutex_lock(&lock);
