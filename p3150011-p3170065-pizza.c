@@ -124,7 +124,6 @@ void* pizza_thread(void *order_id) {
 	if((rand_r(&seed) % 100) <= p_fail){
 		failed++;
 		printf("Order %d failed. Cancelling order...\n", oid);
-		
 		pthread_exit(NULL);
 	}else{
 		success++;
@@ -145,24 +144,25 @@ void* pizza_thread(void *order_id) {
 
 	//Oven handling
 	rc = pthread_mutex_lock(&oven_lock);
-	rc = pthread_mutex_lock(&cook_lock);
 	while (n_oven < pizza_num) {
 		pthread_cond_wait(&oven_cond, &oven_lock);
 	}
 	n_oven = n_oven - pizza_num;
+	
+	rc = pthread_mutex_lock(&cook_lock);
 	n_cook++;
 	
 	//notify all threads
-	rc = pthread_cond_broadcast(&cook_cond);
+	rc = pthread_cond_signal(&cook_cond);
 	rc = pthread_mutex_unlock(&cook_lock);
 
+	rc = pthread_mutex_unlock(&oven_lock);
 	//all pizzas are in the oven and being baked simultaneously
 	sleep(t_bake);
 	
 	//Need to keep the time it took for cooking to finish, no need to mutex since it doesn't affect any condition
 	clock_gettime(CLOCK_REALTIME, &cook_finish);
 	
-	rc = pthread_mutex_unlock(&oven_lock);
 	//Sleep for the time it takes to pack each pizza
 	sleep(t_pack * pizza_num);
 	
