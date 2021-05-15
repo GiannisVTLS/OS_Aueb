@@ -30,4 +30,18 @@ const int t_pack = 2;           // Time required to pack each pizza
 const int t_del_l = 5;   		// Time range that deliveries take
 const int t_del_h = 15;
 
+unsigned int seed;
+pthread_mutex_t tel_lock;
+pthread_cond_t tel_cond;
+
+pthread_mutex_t cook_lock;
+pthread_cond_t cook_cond;
+
+pthread_mutex_t oven_lock;
+pthread_cond_t oven_cond;
+
+pthread_mutex_t del_lock;
+pthread_cond_t del_cond;
+
 void* pizza_thread(void* cust_id);
+void check_rc(int response_code);
