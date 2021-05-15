@@ -9,6 +9,7 @@ int n_tel = 3;            		// Number of call handlers
 int n_cook = 2;           		// Number of cooks
 int n_oven = 10;          		// Number of ovens
 int n_del = 7;            		// Number of deliverers
+int n_pack = 1;                 // Number of employees packing pizzas
 
 const int t_order_l = 1;      	// Time range in which a new order arrives
 const int t_order_h = 5;
@@ -42,6 +43,11 @@ pthread_cond_t oven_cond;
 
 pthread_mutex_t del_lock;
 pthread_cond_t del_cond;
+
+pthread_mutex_t pack_lock;
+pthread_cond_t pack_cond;
+
+pthread_mutex_t time_lock;
 
 void* pizza_thread(void* cust_id);
 void check_rc(int response_code);

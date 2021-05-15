@@ -1,9 +1,9 @@
 #include "p3140038-p3150011-p3170065-pizza.h"
 
 int i, n_cust, failed = 0, success = 0, profits = 0;
-double total_service_time = 0, max_service_time = 0, max_waiting_time = 0, total_waiting_time = 0, total_del_time = 0, max_del_time = 0;
+int total_service_time = 0, max_service_time = 0, max_waiting_time = 0, total_waiting_time = 0, total_del_time = 0, max_del_time = 0;
 
-pthread_mutex_t time_lock;
+
 
 void check_rc(int response_code)
 {
@@ -49,6 +49,8 @@ int main(int argc, char *argv[]) {
 	pthread_cond_init(&cook_cond, NULL);
 	pthread_mutex_init(&oven_lock, NULL);
 	pthread_cond_init(&oven_cond, NULL);
+	pthread_mutex_init(&pack_lock, NULL);
+	pthread_cond_init(&pack_cond, NULL);
 	pthread_mutex_init(&del_lock, NULL);
 	pthread_cond_init(&del_cond, NULL);
 	pthread_mutex_init(&time_lock, NULL);
@@ -77,11 +79,11 @@ int main(int argc, char *argv[]) {
 	printf("Total profits: %d\n", profits);
 	printf("Orders completed successfully: %d\nOrders failed: %d\n", success, failed);
 	//total waiting time is calculated for all customers
-	printf("Average waiting time: %f minutes\nMax waiting time %f minutes\n", (total_waiting_time / n_cust), max_waiting_time);
+	printf("Average waiting time: %d minutes\nMax waiting time %d minutes\n", (total_waiting_time / n_cust), max_waiting_time);
 	//total service time is calculated only for customers whose order succeeded
-	printf("Average service time: %f minutes\nMax service time %f minutes\n", (total_service_time / (n_cust - failed)), max_service_time);
+	printf("Average service time: %d minutes\nMax service time %d minutes\n", (total_service_time / (n_cust - failed)), max_service_time);
 	//total delivery time is calculated only for customers whose order succeeded
-	printf("Average time of pizzas getting cold: %f minutes\nMax time of pizzas getting cold: %f minutes\n", (total_del_time / (n_cust - failed)), max_del_time);
+	printf("Average time of pizzas getting cold: %d minutes\nMax time of pizzas getting cold: %d minutes\n", (total_del_time / (n_cust - failed)), max_del_time);
 
 	pthread_mutex_destroy(&tel_lock);
 	pthread_cond_destroy(&tel_cond);
@@ -89,6 +91,8 @@ int main(int argc, char *argv[]) {
 	pthread_cond_destroy(&cook_cond);
 	pthread_mutex_destroy(&oven_lock);
 	pthread_cond_destroy(&oven_cond);
+	pthread_mutex_destroy(&pack_lock);
+	pthread_cond_destroy(&pack_cond);
 	pthread_mutex_destroy(&del_lock);
 	pthread_cond_destroy(&del_cond);
 	free(threadPool);
@@ -101,7 +105,9 @@ void* pizza_thread(void *order_id) {
 	int oid = *(int *)order_id;
 	unsigned int seed_thr = seed*oid;
 	int rc;
-	double del_time;
+	int ready_time;
+	int del_time;
+	int complete_time;
 	struct timespec order_start;
 	struct timespec order_finish;
 	struct timespec call_finish;
@@ -188,13 +194,31 @@ void* pizza_thread(void *order_id) {
 	//Need to keep the time it took for cooking to finish, no need to mutex since it doesn't affect any condition
 	clock_gettime(CLOCK_REALTIME, &cook_finish);
 	
+	rc = pthread_mutex_lock(&pack_lock);
+	check_rc(rc);
+	while (n_pack == 0) {
+		rc = pthread_cond_wait(&pack_cond, &pack_lock);
+		check_rc(rc);
+	}
+	n_pack--;
+
+	rc = pthread_mutex_unlock(&pack_lock);
+	check_rc(rc);
 	//Sleep for the time it takes to pack each pizza
-	sleep(t_pack * pizza_num);
+	sleep(t_pack);
 	
+	rc = pthread_mutex_lock(&pack_lock);
+	check_rc(rc);
 	rc = pthread_mutex_lock(&oven_lock);
 	check_rc(rc);
-	printf("Order %d is packed and ready to go!\n", oid);
+	
+	ready_time = cook_finish.tv_sec - order_start.tv_sec;
+	printf("Order %d is packed and ready to go! Time: %d minutes\n", oid, ready_time);
 	n_oven = n_oven + pizza_num;
+	n_pack++;
+	pthread_cond_signal(&pack_cond);
+	rc = pthread_mutex_unlock(&pack_lock);
+	check_rc(rc);
 	pthread_cond_broadcast(&oven_cond);
 	rc = pthread_mutex_unlock(&oven_lock);
 	check_rc(rc);
@@ -216,19 +240,21 @@ void* pizza_thread(void *order_id) {
 	sleep(del_time);
 	rc = pthread_mutex_lock(&del_lock);
 	check_rc(rc);
-	printf("Order %d has been delivered!\n", oid);
+
 	clock_gettime(CLOCK_REALTIME, &order_finish);
+	complete_time = order_finish.tv_sec - order_start.tv_sec;
+	printf("Order %d has been delivered! Time: %d minutes\n", oid, complete_time);
 	rc = pthread_mutex_unlock(&del_lock);
 	check_rc(rc);
 	
 	rc = pthread_mutex_lock(&time_lock);
 	check_rc(rc);
-	total_service_time += order_finish.tv_sec - order_start.tv_sec;
+	total_service_time += complete_time;
 	total_waiting_time += call_finish.tv_sec - order_start.tv_sec;
 	total_del_time += order_finish.tv_sec - cook_finish.tv_sec;
 	
-	if(order_finish.tv_sec - order_start.tv_sec > max_service_time){
-		max_service_time = order_finish.tv_sec - order_start.tv_sec;
+	if(complete_time > max_service_time){
+		max_service_time = complete_time;
 	}
 	
 	if(call_finish.tv_sec - order_start.tv_sec > max_waiting_time){
