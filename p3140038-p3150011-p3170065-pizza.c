@@ -1,6 +1,6 @@
 #include "p3140038-p3150011-p3170065-pizza.h"
 
-int i, n_cust, failed = 0, success = 0, profits = 0;
+int n_cust, failed = 0, success = 0, profits = 0;
 int total_service_time = 0, max_service_time = 0, max_waiting_time = 0, total_waiting_time = 0, total_del_time = 0, max_del_time = 0;
 
 
@@ -32,9 +32,12 @@ int main(int argc, char *argv[]) {
 	}
 	
 	int err;
-	
-	int order_id[n_cust];
-
+	int *order_id;
+	order_id = malloc(n_cust*sizeof(int));
+	if(order_id==NULL){
+		printf("Error allocating memory.\n");
+        exit(-1);
+	}
 	/* Init thread*/
 	pthread_t *threadPool;
     threadPool = malloc(n_cust*sizeof(pthread_t));
@@ -56,7 +59,7 @@ int main(int argc, char *argv[]) {
 	pthread_mutex_init(&time_lock, NULL);
 
 	/* Create one thread for each customer that arrives */
-	for(i = 0; i < n_cust; i++) {
+	for(int i = 0; i < n_cust; i++) {
 		order_id[i] = i + 1;
 		err = pthread_create(&threadPool[i], NULL, pizza_thread, &order_id[i]);
 		if (err != 0) {
@@ -69,7 +72,7 @@ int main(int argc, char *argv[]) {
 	}
 	
 	/* Join all the threads */
-	for(i = 0; i < n_cust; i++){
+	for(int i = 0; i < n_cust; i++){
         err = pthread_join(threadPool[i], NULL);
         if (err != 0) {
             printf("pthread_join error: %d\n", err);
@@ -96,6 +99,7 @@ int main(int argc, char *argv[]) {
 	pthread_mutex_destroy(&del_lock);
 	pthread_cond_destroy(&del_cond);
 	free(threadPool);
+	free(order_id);
 	return 0;
 }
 
@@ -138,7 +142,8 @@ void* pizza_thread(void *order_id) {
 	pizza_num = rand_r(&seed_thr) % (n_order_h - n_order_l) + n_order_l;
 	n_tel++;
 	
-	pthread_cond_signal(&tel_cond);
+	rc = pthread_cond_signal(&tel_cond);
+	check_rc(rc);
 	rc = pthread_mutex_unlock(&tel_lock);
 	check_rc(rc);
 	
@@ -181,8 +186,8 @@ void* pizza_thread(void *order_id) {
 	check_rc(rc);
 	n_cook++;
 	
-	//notify all threads
-	pthread_cond_signal(&cook_cond);
+	rc = pthread_cond_signal(&cook_cond);
+	check_rc(rc);
 	rc = pthread_mutex_unlock(&cook_lock);
 	check_rc(rc);
 
@@ -204,7 +209,7 @@ void* pizza_thread(void *order_id) {
 
 	rc = pthread_mutex_unlock(&pack_lock);
 	check_rc(rc);
-	//Sleep for the time it takes to pack each pizza
+	//Sleep for the time it takes to pack all the pizzas
 	sleep(t_pack);
 	
 	rc = pthread_mutex_lock(&pack_lock);
@@ -216,10 +221,12 @@ void* pizza_thread(void *order_id) {
 	printf("Order %d is packed and ready to go! Time: %d minutes\n", oid, ready_time);
 	n_oven = n_oven + pizza_num;
 	n_pack++;
-	pthread_cond_signal(&pack_cond);
+	rc = pthread_cond_signal(&pack_cond);
+	check_rc(rc);
 	rc = pthread_mutex_unlock(&pack_lock);
 	check_rc(rc);
-	pthread_cond_broadcast(&oven_cond);
+	rc = pthread_cond_broadcast(&oven_cond);
+	check_rc(rc);
 	rc = pthread_mutex_unlock(&oven_lock);
 	check_rc(rc);
 
@@ -272,7 +279,8 @@ void* pizza_thread(void *order_id) {
 	rc = pthread_mutex_lock(&del_lock);
 	check_rc(rc);
 	n_del++;
-	pthread_cond_signal(&del_cond);
+	rc = pthread_cond_signal(&del_cond);
+	check_rc(rc);
 	rc = pthread_mutex_unlock(&del_lock);
 	check_rc(rc);
 
