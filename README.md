@@ -5,7 +5,7 @@ Project created for the course of Operating Systems, using C, implemented thread
 
 Implemented a simulation of the operation of a pizzeria from the moment a customer calls the shop until the moment the order is delivered. 
 The pizzeria has a limited number of telephone operators, bakers, ovens, pizza packers and drivers.
-The goal of the assignment is to use mutual exclusion and synchronization to handle multiple customers in the optimal way
+The goal of the assignment is to use mutual exclusion and synchronization to handle multiple customers in the optimal way.
 
 <h3>Made with</h3>
 <ul>
